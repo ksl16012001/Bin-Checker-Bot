@@ -2,6 +2,8 @@ import requests
 from pyrogram import Client, filters
 from configs import config
 from asyncio import sleep
+import ntplib
+import time
 
 from pyrogram.types import (
     Message, 
@@ -9,6 +11,15 @@ from pyrogram.types import (
     InlineKeyboardMarkup
 )
 
+# Hàm đồng bộ thời gian
+def sync_time():
+    try:
+        client = ntplib.NTPClient()
+        response = client.request('pool.ntp.org')  # Sử dụng server NTP đáng tin cậy
+        current_time = time.ctime(response.tx_time)
+        print(f"Thời gian đã đồng bộ: {current_time}")
+    except Exception as e:
+        print(f"Lỗi khi đồng bộ thời gian: {e}")
 
 Bot = Client(
     ":memory:",
@@ -16,7 +27,6 @@ Bot = Client(
     api_id=config.API_ID,
     bot_token=config.BOT_TOKEN,
 )
-
 
 @Bot.on_message(filters.command("start"))
 async def start(_, m: Message):
@@ -35,28 +45,25 @@ async def start(_, m: Message):
         ]
     )
     await m.reply_text(
-        f"Hi! {messy} \nI can Check bins Valid or Invalid.\n\nTo see more check /help command",
+        f"Hi! {messy} \nTôi có thể kiểm tra bin hợp lệ hay không.\n\nĐể biết thêm chi tiết, dùng lệnh /help",
         reply_markup=keyboard,
     )
-
 
 @Bot.on_message(filters.command("help"))
 async def help(_, m: Message):
     await m.reply_text(
-        "/start - **To check bot alive**.\n/help - **To see help menu.**\n/bin [qoury] - **To check Bin is valide or Invalid.**"
+        "/start - **Kiểm tra bot còn hoạt động không**.\n/help - **Xem menu trợ giúp.**\n/bin [bin] - **Kiểm tra Bin hợp lệ hay không.**"
     )
-
 
 @Bot.on_message(filters.command("bin"))
 async def bin(_, m: Message):
     if len(m.command) < 2:
-        msg = await m.reply_text("Please Provide a Bin!\nEx:- `/bin 401658`")
+        msg = await m.reply_text("Vui lòng cung cấp một Bin!\nVí dụ:- `/bin 401658`")
         await sleep(15)
         await msg.delete()
-
     else:
         try:
-            mafia = await m.reply_text("processing...")
+            mafia = await m.reply_text("Đang xử lý...")
             inputm = m.text.split(None, 1)[1]
             bincode = 6
             ask = inputm[:bincode]
@@ -64,7 +71,7 @@ async def bin(_, m: Message):
             res = req["result"]
 
             if res == False:
-                return await mafia.edit("❌ #INVALID_BIN ❌\n\nPlease provide a valid bin.")
+                return await mafia.edit("❌ #BIN_KHÔNG_HỢP_LỆ ❌\n\nVui lòng cung cấp bin hợp lệ.")
             da = req["data"]
             bi = da["bin"]
             ve = da["vendor"]
@@ -80,13 +87,14 @@ async def bin(_, m: Message):
 
             mfrom = m.from_user.mention
             caption = f"""
-    ╔ Valid :- `{res} ✅`\n╚ Bin :- `{bi}`\n\n╔ Brand :- `{ve}`\n╠ Type :- `{ty}`\n╚ Level :- `{le}`\n\n╔ Bank :- `{ban} ({co})`\n╠ Country :- `{nm} {em}`\n╠ Alpha2 :- `{cod}`\n╚ DialCode :- `{dial}`\n\n**↠ Checked By :-** {mfrom}\n**↠ __Bot By :-** [Denuwan](https://github.com/ImDenuwan/Bin-Checker-Bot)__
+    ╔ Hợp lệ :- `{res} ✅`\n╚ Bin :- `{bi}`\n\n╔ Thương hiệu :- `{ve}`\n╠ Loại :- `{ty}`\n╚ Cấp độ :- `{le}`\n\n╔ Ngân hàng :- `{ban} ({co})`\n╠ Quốc gia :- `{nm} {em}`\n╠ Mã Alpha2 :- `{cod}`\n╚ Mã quay số :- `{dial}`\n\n**↠ Kiểm tra bởi :-** {mfrom}\n**↠ __Bot bởi :-** [Denuwan](https://github.com/ImDenuwan/Bin-Checker-Bot)__
     """
             await mafia.edit(caption, disable_web_page_preview=True)
             
         except Exception as e:
-            await bot.reply_text(f"**Oops Error!**\n{e}\n\n**Report This Bug to Bot Owner.**")
+            await m.reply_text(f"**Lỗi xảy ra!**\n{e}\n\n**Báo lỗi này cho chủ bot.**")
 
-print("Bot IS Alive Now")
-
+# Gọi hàm đồng bộ thời gian trước khi chạy bot
+print("Bot đang khởi động...")
+sync_time()  # Đồng bộ thời gian
 Bot.run()
