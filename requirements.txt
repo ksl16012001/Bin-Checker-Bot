@@ -2,3 +2,4 @@ asyncio
 pyrogram>=2.0.106
 TgCrypto 
 requests
+ntplib>=0.4.0
